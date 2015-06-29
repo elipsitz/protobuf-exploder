@@ -17,8 +17,8 @@ public class Main {
 
 		List<String> arg_flags = new ArrayList<String>();
 		String arg_filename = "";
-		for(String arg : args) {
-			if(arg.startsWith("-")) {
+		for (String arg : args) {
+			if (arg.startsWith("-")) {
 				arg_flags.add(arg.substring(1));
 			} else {
 				arg_filename = arg.trim();
@@ -26,12 +26,12 @@ public class Main {
 			}
 		}
 
-		if(arg_filename.length() == 0) {
+		if (arg_filename.length() == 0) {
 			System.out.println("Missing input file, demo mode enabled");
 			arg_flags.add("demo");
 		}
 
-		if(arg_flags.contains("demo")) {
+		if (arg_flags.contains("demo")) {
 			println("DEMO MODE: ");
 			try {
 				ProtobufExploder.dumpProto(Base64.getDecoder().decode(demoBase64));
@@ -43,7 +43,7 @@ public class Main {
 			File file = new File(arg_filename);
 			try {
 				FileInputStream fileInputStream = new FileInputStream(file);
-				ProtobufExploder.dumpProto(fileInputStream);
+				ProtobufExploder.dumpProto("", null, fileInputStream);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

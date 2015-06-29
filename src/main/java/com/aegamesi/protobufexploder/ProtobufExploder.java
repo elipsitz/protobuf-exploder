@@ -1,78 +1,106 @@
 package com.aegamesi.protobufexploder;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.aegamesi.protobufexploder.protobuf.ProtobufType;
+import com.aegamesi.protobufexploder.protobuf.SchemaEntry;
+import com.aegamesi.protobufexploder.protobuf.WireType;
 import com.google.common.io.LittleEndianDataInputStream;
 import hudson.plugins.timestamper.io.Varint;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
+
 import static com.aegamesi.protobufexploder.Util.println;
 
 // https://developers.google.com/protocol-buffers/docs/encoding#simple
 public class ProtobufExploder {
-	static String demoBase64 = "CAEQARgBIgJlbg==";
-
-
 	public static void dumpProto(byte[] bytes) throws IOException {
 		ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
-		dumpProto(inputStream);
+		dumpProto("", null, inputStream);
 	}
 
-	public static void dumpProto(InputStream inputStream) throws IOException {
+	public static void dumpProto(String namespace, Map<String, SchemaEntry> schema, InputStream inputStream) throws IOException {
 		LittleEndianDataInputStream dataStream = new LittleEndianDataInputStream(inputStream);
 		while (dataStream.available() > 0) {
 			long key = Varint.read(dataStream);
-			int wire_type = (int) (key & 0x7);
+			WireType wire_type = WireType.get((int) (key & 0x7));
 			long field_number = key >> 3;
 
-			println("Field #%d, Type: %s (%d)", field_number, getWireTypeName(wire_type), wire_type);
+			SchemaEntry schemaEntry = schema != null ? schema.get(namespace + "." + field_number) : null;
+			ProtobufType protobufType = (schemaEntry != null && schemaEntry.type != null) ? schemaEntry.type : wire_type.getDefaultType();
+
+			println("Field #%d, Type: %s", field_number, wire_type);
 
 			switch (wire_type) {
-				case 0:
+				case W_VARINT: {
 					// varint -- int32, int64, uint32, uint64, sint32, sint64, bool, enum
-					println("\tValue: %d", Varint.read(dataStream));
+					long value = Varint.read(dataStream);
+					switch (protobufType) {
+						case T_BOOL:
+							println("\tValue: %b", value != 0);
+							break;
+						default:
+							println("\tValue: %d", value);
+							break;
+					}
 					break;
-				case 1:
+				}
+				case W_64BIT: {
 					// 64-bit -- fixed64, sfixed64, double
-					println("\tValue: %d", dataStream.readLong());
+					switch (protobufType) {
+						case T_DOUBLE:
+							double double_value = dataStream.readDouble();
+							println("\tValue: %f", double_value);
+							break;
+						default:
+							long long_value = dataStream.readLong();
+							println("\tValue: %d", long_value);
+							break;
+					}
 					break;
-				case 2:
+				}
+				case W_LENGTH_DELIMITED:
 					// Length delimited -- string, bytes, embedded messages, packed repeated fields
 					int length = (int) Varint.read(dataStream);
-					byte[] byteArray = new byte[length];
-					dataStream.read(byteArray);
-					String str = new String(byteArray);
-					println("\tValue (%d bytes): \"%s\"", length, str);
+					byte[] bytes = new byte[length];
+					length = dataStream.read(bytes);
+					switch (protobufType) {
+						case T_STRING:
+							println("\tValue (%d bytes): \"%s\"", length, new String(bytes));
+							break;
+						case T_MESSAGE:
+							ByteArrayInputStream stream = new ByteArrayInputStream(bytes);
+							println("\tValue: ====== (%d bytes)", length);
+							dumpProto(namespace + "." + field_number, schema, stream);
+							println("\t=============");
+							break;
+						default:
+						case T_BYTES:
+							println("\tValue (%d bytes): \"%s\"", length, Util.representBytesAsString(bytes));
+							break;
+					}
 					break;
-				case 3:
+				case W_GROUP_START:
 					// start group
 					break;
-				case 4:
+				case W_GROUP_END:
 					// end group
 					break;
-				case 5:
+				case W_32BIT:
 					// 32 bit -- fixed32, sfixed32, float
-					println("\tValue: %d", dataStream.readInt());
+					switch (protobufType) {
+						case T_FLOAT:
+							float float_value = dataStream.readFloat();
+							println("\tValue: %f", float_value);
+							break;
+						default:
+							int int_value = dataStream.readInt();
+							println("\tValue: %d", int_value);
+							break;
+					}
 					break;
 			}
 		}
-	}
-
-
-	final static String[] wireTypeNames = new String[6];
-
-	static {
-		wireTypeNames[0] = "varint";
-		wireTypeNames[1] = "64-bit";
-		wireTypeNames[2] = "length-delimited";
-		wireTypeNames[3] = "start-group";
-		wireTypeNames[4] = "end-group";
-		wireTypeNames[5] = "32-bit";
-	}
-
-	public static String getWireTypeName(int type) {
-		if (type < 0 || type >= wireTypeNames.length)
-			return "unknown";
-		return wireTypeNames[type];
 	}
 }
