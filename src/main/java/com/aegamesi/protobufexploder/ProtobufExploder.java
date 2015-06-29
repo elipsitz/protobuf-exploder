@@ -15,11 +15,6 @@ import static com.aegamesi.protobufexploder.Util.println;
 
 // https://developers.google.com/protocol-buffers/docs/encoding#simple
 public class ProtobufExploder {
-	public static void dumpProto(byte[] bytes) throws IOException {
-		ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
-		dumpProto("", null, inputStream);
-	}
-
 	public static void dumpProto(String namespace, Map<String, SchemaEntry> schema, InputStream inputStream) throws IOException {
 		LittleEndianDataInputStream dataStream = new LittleEndianDataInputStream(inputStream);
 		while (dataStream.available() > 0) {

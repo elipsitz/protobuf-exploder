@@ -1,52 +1,64 @@
 package com.aegamesi.protobufexploder;
 
-import java.io.File;
-import java.io.FileInputStream;
+import com.aegamesi.protobufexploder.protobuf.SchemaEntry;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
 
 import static com.aegamesi.protobufexploder.Util.println;
 
 public class Main {
-	static String demoBase64 = "CAEQARgBIgJlbg==";
+	final static String demoBase64 = "CAEQARgBIgJlbg==";
 
 	public static void main(String[] args) {
-		println("ProtobufExploder");
+		byte[] loadedProtobuf = null;
+		Map<String, SchemaEntry> schema = new HashMap<String, SchemaEntry>();
 
-		List<String> arg_flags = new ArrayList<String>();
-		String arg_filename = "";
-		for (String arg : args) {
-			if (arg.startsWith("-")) {
-				arg_flags.add(arg.substring(1));
-			} else {
-				arg_filename = arg.trim();
+		System.out.println("protobuf-exploder");
+
+		Scanner scanner = new Scanner(System.in);
+		while (true) {
+			System.out.print("> ");
+			if (!scanner.hasNextLine())
 				break;
-			}
-		}
+			String inputLine = scanner.nextLine().trim();
+			String[] input = inputLine.split(" ");
+			if (input.length == 0)
+				continue;
 
-		if (arg_filename.length() == 0) {
-			System.out.println("Missing input file, demo mode enabled");
-			arg_flags.add("demo");
-		}
+			if (input[0].equalsIgnoreCase("exit") || input[0].equalsIgnoreCase("quit") || input[0].equalsIgnoreCase("done")) {
+				println("Stopping...");
+				System.exit(0);
+			}
+			if (input[0].equalsIgnoreCase("help") || input[0].equalsIgnoreCase("?")) {
+				println("Unimplemented");
+				continue;
+			}
+			if (input[0].equalsIgnoreCase("demo")) {
+				loadedProtobuf = Base64.getDecoder().decode(demoBase64);
+				println("Loaded demo protobuf.");
+				continue;
+			}
+			if (input[0].equalsIgnoreCase("dump") || input[0].equalsIgnoreCase("explode") || input[0].equalsIgnoreCase("inspect")) {
+				if (loadedProtobuf == null) {
+					println("No protobuf loaded.");
+				} else {
+					println("Dumping protobuf...");
+					ByteArrayInputStream inputStream = new ByteArrayInputStream(loadedProtobuf);
+					try {
+						ProtobufExploder.dumpProto("", schema, inputStream);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				continue;
+			}
 
-		if (arg_flags.contains("demo")) {
-			println("DEMO MODE: ");
-			try {
-				ProtobufExploder.dumpProto(Base64.getDecoder().decode(demoBase64));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		} else {
-			println("\n\nExploding %s:", arg_filename);
-			File file = new File(arg_filename);
-			try {
-				FileInputStream fileInputStream = new FileInputStream(file);
-				ProtobufExploder.dumpProto("", null, fileInputStream);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			println("Unrecognized command, '%s'", input);
 		}
 	}
 }
