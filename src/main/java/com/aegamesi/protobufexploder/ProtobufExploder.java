@@ -1,6 +1,7 @@
 package com.aegamesi.protobufexploder;
 
 import com.aegamesi.protobufexploder.protobuf.ProtobufType;
+import com.aegamesi.protobufexploder.protobuf.Schema;
 import com.aegamesi.protobufexploder.protobuf.SchemaEntry;
 import com.aegamesi.protobufexploder.protobuf.WireType;
 import com.google.common.io.LittleEndianDataInputStream;
@@ -9,23 +10,26 @@ import hudson.plugins.timestamper.io.Varint;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 
 import static com.aegamesi.protobufexploder.Util.println;
 
 // https://developers.google.com/protocol-buffers/docs/encoding#simple
 public class ProtobufExploder {
-	public static void dumpProto(String namespace, Map<String, SchemaEntry> schema, InputStream inputStream) throws IOException {
+	public static void dumpProto(String namespace, Schema schema, InputStream inputStream) throws IOException {
 		LittleEndianDataInputStream dataStream = new LittleEndianDataInputStream(inputStream);
 		while (dataStream.available() > 0) {
 			long key = Varint.read(dataStream);
 			WireType wire_type = WireType.get((int) (key & 0x7));
 			long field_number = key >> 3;
 
-			SchemaEntry schemaEntry = schema != null ? schema.get(namespace + "." + field_number) : null;
-			ProtobufType protobufType = (schemaEntry != null && schemaEntry.type != null) ? schemaEntry.type : wire_type.getDefaultType();
+			String schemaKey = namespace.length() == 0 ? "" + field_number : "." + field_number;
+			SchemaEntry schemaEntry = schema.get(schemaKey);
+			ProtobufType protobufType = schemaEntry.type != null ? schemaEntry.type : wire_type.getDefaultType();
 
-			println("Field #%d, Type: %s", field_number, wire_type);
+			if (schemaEntry.name == null)
+				println("Field #%d, Type: %s/%s", field_number, protobufType.name(), wire_type);
+			else
+				println("Field #%d ('%s'), Type: %s/%s", field_number, schemaEntry.name, protobufType.name(), wire_type);
 
 			switch (wire_type) {
 				case W_VARINT: {
@@ -67,12 +71,12 @@ public class ProtobufExploder {
 						case T_MESSAGE:
 							ByteArrayInputStream stream = new ByteArrayInputStream(bytes);
 							println("\tValue: ====== (%d bytes)", length);
-							dumpProto(namespace + "." + field_number, schema, stream);
+							dumpProto(schemaKey, schema, stream);
 							println("\t=============");
 							break;
 						default:
 						case T_BYTES:
-							println("\tValue (%d bytes): \"%s\"", length, Util.representBytesAsString(bytes));
+							println("\tValue: byte[%d]{%s}", length, Util.representBytesAsString(bytes));
 							break;
 					}
 					break;

@@ -1,12 +1,11 @@
 package com.aegamesi.protobufexploder;
 
-import com.aegamesi.protobufexploder.protobuf.SchemaEntry;
+import com.aegamesi.protobufexploder.protobuf.ProtobufType;
+import com.aegamesi.protobufexploder.protobuf.Schema;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Scanner;
 
 import static com.aegamesi.protobufexploder.Util.println;
@@ -16,7 +15,7 @@ public class Main {
 
 	public static void main(String[] args) {
 		byte[] loadedProtobuf = null;
-		Map<String, SchemaEntry> schema = new HashMap<String, SchemaEntry>();
+		Schema schema = new Schema();
 
 		System.out.println("protobuf-exploder");
 
@@ -54,6 +53,37 @@ public class Main {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+				}
+				continue;
+			}
+			if (input[0].equalsIgnoreCase("types")) {
+				for (ProtobufType type : ProtobufType.values()) {
+					System.out.print(type.name + " ");
+				}
+				println("");
+				continue;
+			}
+
+			//
+			if (input[0].equalsIgnoreCase("name")) {
+				if (input.length < 3) {
+					println("name [field number] [name]");
+				} else {
+					String key = input[1];
+					String name = input[2];
+					schema.get(key).name = name;
+					println("set name of '%s' to %s", key, name);
+				}
+				continue;
+			}
+			if (input[0].equalsIgnoreCase("type")) {
+				if (input.length < 3) {
+					println("type [field number] [type]");
+				} else {
+					String key = input[1];
+					String type = input[2];
+					schema.get(key).type = ProtobufType.fromName(type);
+					println("set type of '%s' to %s", key, schema.get(key).type.name);
 				}
 				continue;
 			}
