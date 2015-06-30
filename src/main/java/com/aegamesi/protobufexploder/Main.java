@@ -2,8 +2,10 @@ package com.aegamesi.protobufexploder;
 
 import com.aegamesi.protobufexploder.protobuf.ProtobufType;
 import com.aegamesi.protobufexploder.protobuf.Schema;
+import com.google.common.io.Files;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Scanner;
@@ -34,12 +36,31 @@ public class Main {
 				System.exit(0);
 			}
 			if (input[0].equalsIgnoreCase("help") || input[0].equalsIgnoreCase("?")) {
-				println("Unimplemented");
+				println("Commands:");
+				println("load [file] -- load a serialized protobuf file into memory");
+				println("demo        -- load the demo protobuf file into memory");
+				println("dump        -- dump the contents of the current protobuf using the current schema");
+				println("name [field number] [name] -- set the name for a given field");
+				println("type [field number] [type] -- force a field to be interpreted as a certain type");
+				println("types       -- list the valid types for 'type...'");
+				println("exit        -- exit the program");
 				continue;
 			}
 			if (input[0].equalsIgnoreCase("demo")) {
 				loadedProtobuf = Base64.getDecoder().decode(demoBase64);
 				println("Loaded demo protobuf.");
+				continue;
+			}
+			if (input[0].equalsIgnoreCase("load")) {
+				String fileName = inputLine.substring("load ".length());
+				File file = new File(fileName);
+				try {
+					loadedProtobuf = Files.toByteArray(file);
+					println("Loaded protobuf '%s'", fileName);
+				} catch (IOException e) {
+					e.printStackTrace();
+					println("Error reading file.");
+				}
 				continue;
 			}
 			if (input[0].equalsIgnoreCase("dump") || input[0].equalsIgnoreCase("explode") || input[0].equalsIgnoreCase("inspect")) {
